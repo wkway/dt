@@ -1,0 +1,41 @@
+name: docker
+
+on:
+  push:
+    branches: main
+  pull_request:
+    branches: main
+  schedule:
+    - cron: '0 0 * * *'
+    
+jobs:
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+      with:
+        ref: main
+        fetch-depth: 0
+        lfs: true      
+    - uses: docker/build-push-action@v2
+      with: 
+        tags: hosts:latest
+        push: false
+    - uses: kohlerdominik/docker-run-action@v1
+      with: 
+        image: hosts:latest
+        volumes: |
+          ${{ github.workspace }}/work:/usr/src/hosts/work
+        options: --name=webserver
+        run: python updateHostsFile.py -a -e fakenews gambling social -m -x blacklistfile -o work
+ 
+    - name: commit 
+      run: |
+        git config --global user.email "actions@github.com"
+        git config --global user.name "actions" 
+  
+    - name: push
+      run: |
+        echo "======================="
+        git add . && git commit -m "$(date "+%Y%m%d-%H%M")" && git push && echo "UPDATE SUCCESS!" || echo "There are currently no updates!"
+        echo "======================="        
